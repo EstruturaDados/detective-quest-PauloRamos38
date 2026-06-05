@@ -1,47 +1,143 @@
-#include <stdio.h>
+// Nível Novato - Tema: Árvore Binária
+#include <stdio.h>  // Obrigatória
+#include <stdlib.h> // malloc, free, exit
+#include <string.h> // strcpy, strcmp
 
-// Desafio Detective Quest
-// Tema 4 - Árvores e Tabela Hash
-// Este código inicial serve como base para o desenvolvimento das estruturas de navegação, pistas e suspeitos.
-// Use as instruções de cada região para desenvolver o sistema completo com árvore binária, árvore de busca e tabela hash.
+typedef struct Sala {
+    char nome[50];
+    struct Sala* esquerda;
+    struct Sala* direita;
+    int esquerdaExplorada;
+    int direitaExplorada;
+} Sala;
 
-int main() {
-
-    // 🌱 Nível Novato: Mapa da Mansão com Árvore Binária
-    //
-    // - Crie uma struct Sala com nome, e dois ponteiros: esquerda e direita.
-    // - Use funções como criarSala(), conectarSalas() e explorarSalas().
-    // - A árvore pode ser fixa: Hall de Entrada, Biblioteca, Cozinha, Sótão etc.
-    // - O jogador deve poder explorar indo à esquerda (e) ou à direita (d).
-    // - Finalize a exploração com uma opção de saída (s).
-    // - Exiba o nome da sala a cada movimento.
-    // - Use recursão ou laços para caminhar pela árvore.
-    // - Nenhuma inserção dinâmica é necessária neste nível.
-
-    // 🔍 Nível Aventureiro: Armazenamento de Pistas com Árvore de Busca
-    //
-    // - Crie uma struct Pista com campo texto (string).
-    // - Crie uma árvore binária de busca (BST) para inserir as pistas coletadas.
-    // - Ao visitar salas específicas, adicione pistas automaticamente com inserirBST().
-    // - Implemente uma função para exibir as pistas em ordem alfabética (emOrdem()).
-    // - Utilize alocação dinâmica e comparação de strings (strcmp) para organizar.
-    // - Não precisa remover ou balancear a árvore.
-    // - Use funções para modularizar: inserirPista(), listarPistas().
-    // - A árvore de pistas deve ser exibida quando o jogador quiser revisar evidências.
-
-    // 🧠 Nível Mestre: Relacionamento de Pistas com Suspeitos via Hash
-    //
-    // - Crie uma struct Suspeito contendo nome e lista de pistas associadas.
-    // - Crie uma tabela hash (ex: array de ponteiros para listas encadeadas).
-    // - A chave pode ser o nome do suspeito ou derivada das pistas.
-    // - Implemente uma função inserirHash(pista, suspeito) para registrar relações.
-    // - Crie uma função para mostrar todos os suspeitos e suas respectivas pistas.
-    // - Adicione um contador para saber qual suspeito foi mais citado.
-    // - Exiba ao final o “suspeito mais provável” baseado nas pistas coletadas.
-    // - Para hashing simples, pode usar soma dos valores ASCII do nome ou primeira letra.
-    // - Em caso de colisão, use lista encadeada para tratar.
-    // - Modularize com funções como inicializarHash(), buscarSuspeito(), listarAssociacoes().
-
-    return 0;
+Sala* criarSala(const char* nome) {
+    Sala* nova = (Sala*)malloc(sizeof(Sala));
+    if (nova == NULL) {
+        printf("Erro: Falha na alocacao de memoria!\n");
+        exit(1);
+    }
+    strcpy(nova->nome, nome);
+    nova->esquerda = NULL;
+    nova->direita = NULL;
+    nova->esquerdaExplorada = 0;
+    nova->direitaExplorada = 0;
+    return nova;
 }
 
+Sala* construirMansao() {
+    Sala* hall = criarSala("Hall de Entrada");
+    
+    hall->esquerda = criarSala("Biblioteca");
+    hall->direita  = criarSala("Cozinha");
+
+    hall->esquerda->esquerda = criarSala("Sotao");
+    hall->esquerda->direita  = criarSala("Sala de Jantar");
+
+    hall->direita->esquerda = criarSala("Porao");
+    hall->direita->direita  = criarSala("Caminho Bloqueado");
+    
+    return hall;
+}
+
+// Função auxiliar para sair do jogo de forma limpa
+void sairDoJogo(Sala* mansao) {
+    printf("\nSaindo da exploracao...\n");
+    printf("========================================\n");
+    printf("Finalizando o programa...\n");
+    printf("Liberando memoria da arvore (percurso em POS-ORDEM)...\n");
+    liberarMansao(mansao);
+    printf("Memoria liberada com sucesso!\n");
+    printf("========================================\n");
+    printf("\nObrigado por jogar Detective Quest!\n");
+    exit(0);
+}
+
+void explorarSalas(Sala* atual, Sala* raiz) {
+    if (atual == NULL) return;
+
+    while (1) {
+        printf("\n======================================\n");
+        printf("   Voce esta em: %s\n", atual->nome);
+        printf("======================================\n");
+
+        if (strcmp(atual->nome, "Caminho Bloqueado") == 0) {
+            printf("ERRO: Este caminho esta bloqueado!\n");
+            printf("Pressione ENTER para voltar...\n");
+            getchar(); 
+            getchar();
+            return;
+        }
+
+        if (atual->esquerda == NULL && atual->direita == NULL) {
+            printf("Este e um beco sem saida! Nao ha mais caminhos.\n");
+        }
+
+        printf("\nPara onde deseja ir?\n");
+        printf("(E) Esquerda\n");
+        printf("(D) Direita\n");
+
+        if ((atual->esquerda == NULL && atual->direita == NULL) ||
+            (atual->esquerdaExplorada && atual->direitaExplorada)) {
+            printf("(S) Sair do Jogo\n");
+        } else {
+            printf("(S) Sair do Jogo (bloqueado - explore os dois lados primeiro)\n");
+        }
+
+        printf("Digite sua escolha: ");
+
+        char linha[10];
+        fgets(linha, sizeof(linha), stdin);
+        char opcao = linha[0];
+
+        if (opcao == 'e' || opcao == 'E') {
+            if (atual->esquerda != NULL) {
+                explorarSalas(atual->esquerda, raiz);
+                atual->esquerdaExplorada = 1;
+            } else {
+                printf("Nao ha caminho para a esquerda!\n");
+            }
+        }
+        else if (opcao == 'd' || opcao == 'D') {
+            if (atual->direita != NULL) {
+                explorarSalas(atual->direita, raiz);
+                atual->direitaExplorada = 1;
+            } else {
+                printf("Nao ha caminho para a direita!\n");
+            }
+        }
+        else if (opcao == 's' || opcao == 'S') {
+            if ((atual->esquerda == NULL && atual->direita == NULL) ||
+                (atual->esquerdaExplorada && atual->direitaExplorada)) {
+                sairDoJogo(raiz);        // Sai do programa completamente
+            } else {
+                printf("Voce ainda nao explorou todos os caminhos deste comodo!\n");
+                printf("Explore tanto a Esquerda quanto a Direita antes de sair.\n");
+            }
+        }
+        else {
+            printf("Opcao invalida! Digite E, D ou S.\n");
+        }
+    }
+}
+
+void liberarMansao(Sala* sala) {
+    if (sala == NULL) return;
+    liberarMansao(sala->esquerda);
+    liberarMansao(sala->direita);
+    free(sala);
+}
+
+int main() {
+    printf("========================================\n");
+    printf("     DETECTIVE QUEST - NIVEL NOVATO\n");
+    printf("========================================\n\n");
+    
+    printf("Bem-vindo a Mansao Misteriosa!\n");
+    printf("Explore todos os caminhos antes de poder sair do jogo!\n\n");
+
+    Sala* mansao = construirMansao();
+    explorarSalas(mansao, mansao);   // Passa a raiz para conseguir liberar depois
+
+    return 0;  // Nunca deve chegar aqui
+}
