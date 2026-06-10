@@ -1,0 +1,373 @@
+/////////////////////////////////////////////////
+//Nível Mestre
+////////////////////////////////////////////////
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define TAM_HASH 10
+
+// ==============================
+// Estrutura das salas da mansão
+// ==============================
+
+typedef struct Sala {
+    char nome[50];
+    struct Sala *esquerda;
+    struct Sala *direita;
+} Sala;
+
+// ==============================
+// Estrutura da BST de pistas
+// ==============================
+
+typedef struct Pista {
+    char descricao[100];
+    struct Pista *esquerda;
+    struct Pista *direita;
+} Pista;
+
+// ==============================
+// Estrutura da tabela hash
+// ==============================
+
+typedef struct ItemHash {
+    char pista[100];
+    char suspeito[50];
+    struct ItemHash *proximo;
+} ItemHash;
+
+ItemHash *tabelaHash[TAM_HASH];
+
+// ==============================
+// Função hash
+// ==============================
+
+int funcaoHash(char *chave) {
+    int soma = 0;
+
+    for (int i = 0; chave[i] != '\0'; i++) {
+        soma += chave[i];
+    }
+
+    return soma % TAM_HASH;
+}
+
+// ==============================
+// criarSala()
+// Cria dinamicamente um cômodo.
+// ==============================
+
+Sala* criarSala(char nome[]) {
+    Sala *novaSala = (Sala*) malloc(sizeof(Sala));
+
+    strcpy(novaSala->nome, nome);
+
+    novaSala->esquerda = NULL;
+    novaSala->direita = NULL;
+
+    return novaSala;
+}
+
+// ==============================
+// inserirPista()
+// Insere pista na BST.
+// ==============================
+
+Pista* inserirPista(Pista *raiz, char pista[]) {
+
+    if (raiz == NULL) {
+
+        Pista *nova = (Pista*) malloc(sizeof(Pista));
+
+        strcpy(nova->descricao, pista);
+
+        nova->esquerda = NULL;
+        nova->direita = NULL;
+
+        return nova;
+    }
+
+    if (strcmp(pista, raiz->descricao) < 0) {
+        raiz->esquerda = inserirPista(raiz->esquerda, pista);
+    }
+    else if (strcmp(pista, raiz->descricao) > 0) {
+        raiz->direita = inserirPista(raiz->direita, pista);
+    }
+
+    return raiz;
+}
+
+// ==============================
+// adicionarPista()
+// Adiciona pista coletada.
+// ==============================
+
+void adicionarPista(Pista **raiz, char pista[]) {
+    *raiz = inserirPista(*raiz, pista);
+}
+
+// ==============================
+// inserirNaHash()
+// Associa pista a suspeito.
+// ==============================
+
+void inserirNaHash(char pista[], char suspeito[]) {
+
+    int indice = funcaoHash(pista);
+
+    ItemHash *novo = (ItemHash*) malloc(sizeof(ItemHash));
+
+    strcpy(novo->pista, pista);
+    strcpy(novo->suspeito, suspeito);
+
+    novo->proximo = tabelaHash[indice];
+    tabelaHash[indice] = novo;
+}
+
+// ==============================
+// encontrarSuspeito()
+// Consulta suspeito pela pista.
+// ==============================
+
+char* encontrarSuspeito(char pista[]) {
+
+    int indice = funcaoHash(pista);
+
+    ItemHash *aux = tabelaHash[indice];
+
+    while (aux != NULL) {
+
+        if (strcmp(aux->pista, pista) == 0) {
+            return aux->suspeito;
+        }
+
+        aux = aux->proximo;
+    }
+
+    return NULL;
+}
+
+// ==============================
+// Converte texto para minúsculo
+// ==============================
+
+void converterMinusculo(char texto[]) {
+
+    for (int i = 0; texto[i] != '\0'; i++) {
+        texto[i] = tolower((unsigned char)texto[i]);
+    }
+}
+
+// ==============================
+// Exibe pistas em ordem
+// ==============================
+
+void exibirPistas(Pista *raiz) {
+
+    if (raiz != NULL) {
+
+        exibirPistas(raiz->esquerda);
+
+        printf("- %s\n", raiz->descricao);
+
+        exibirPistas(raiz->direita);
+    }
+}
+
+// ==============================
+// Conta pistas de um suspeito
+// ==============================
+
+int contarPistasSuspeito(Pista *raiz, char suspeito[]) {
+
+    if (raiz == NULL)
+        return 0;
+
+    int contador = 0;
+
+    char *sus = encontrarSuspeito(raiz->descricao);
+
+    if (sus != NULL && strcmp(sus, suspeito) == 0) {
+        contador = 1;
+    }
+
+    return contador +
+           contarPistasSuspeito(raiz->esquerda, suspeito) +
+           contarPistasSuspeito(raiz->direita, suspeito);
+}
+
+// ==============================
+// Pista de cada sala
+// ==============================
+
+char* obterPistaSala(char sala[]) {
+
+    if (strcmp(sala, "Biblioteca") == 0)
+        return "Livro rasgado";
+
+    if (strcmp(sala, "Cozinha") == 0)
+        return "Faca suja";
+
+    if (strcmp(sala, "Escritorio") == 0)
+        return "Carta misteriosa";
+
+    if (strcmp(sala, "Jardim") == 0)
+        return "Pegadas";
+
+    if (strcmp(sala, "Porao") == 0)
+        return "Luva preta";
+
+    if (strcmp(sala, "Sala de Estar") == 0)
+        return "Relogio quebrado";
+
+    if (strcmp(sala, "Quarto") == 0)
+        return "Bilhete escondido";
+
+    return NULL;
+}
+
+// ==============================
+// explorarSalas()
+// Navega pela mansão.
+// ==============================
+
+void explorarSalas(Sala *atual, Pista **arvorePistas) {
+
+    char opcao;
+
+    while (atual != NULL) {
+
+        printf("\n=================================\n");
+        printf("Voce esta em: %s\n", atual->nome);
+
+        char *pista = obterPistaSala(atual->nome);
+
+        if (pista != NULL) {
+
+            printf("Pista encontrada: %s\n", pista);
+
+            adicionarPista(arvorePistas, pista);
+        }
+
+        printf("\nEscolha:\n");
+
+        if (atual->esquerda != NULL)
+            printf("e - Ir para esquerda\n");
+
+        if (atual->direita != NULL)
+            printf("d - Ir para direita\n");
+
+        printf("s - Encerrar investigacao\n");
+
+        scanf(" %c", &opcao);
+
+        if (opcao == 'e' && atual->esquerda != NULL) {
+            atual = atual->esquerda;
+        }
+        else if (opcao == 'd' && atual->direita != NULL) {
+            atual = atual->direita;
+        }
+        else if (opcao == 's') {
+            break;
+        }
+        else {
+            printf("Opcao invalida!\n");
+        }
+    }
+}
+
+// ==============================
+// verificarSuspeitoFinal()
+// Julgamento final.
+// ==============================
+
+void verificarSuspeitoFinal(Pista *arvorePistas) {
+
+    char suspeito[50];
+
+    printf("\n=================================\n");
+    printf("PISTAS COLETADAS\n\n");
+
+    exibirPistas(arvorePistas);
+
+    printf("\n=================================\n");
+    printf("Quem e o culpado?\n");
+    printf("joao\n");
+    printf("maria\n");
+    printf("carlos\n");
+
+    printf("\nDigite o nome do suspeito: ");
+    scanf("%49s", suspeito);
+
+    converterMinusculo(suspeito);
+
+    int quantidade =
+        contarPistasSuspeito(arvorePistas, suspeito);
+
+    printf("\nQuantidade de pistas encontradas para %s: %d\n",
+           suspeito, quantidade);
+
+    if (quantidade >= 2) {
+
+        printf("\nACUSACAO CONFIRMADA!\n");
+        printf("%s possui %d pistas contra ele.\n",
+               suspeito, quantidade);
+        printf("O criminoso foi identificado!\n");
+    }
+    else {
+
+        printf("\nPROVAS INSUFICIENTES!\n");
+        printf("A acusacao contra %s nao pode ser sustentada.\n",
+               suspeito);
+    }
+}
+
+// ==============================
+// Programa principal
+// ==============================
+
+int main() {
+
+    Pista *arvorePistas = NULL;
+
+    for (int i = 0; i < TAM_HASH; i++) {
+        tabelaHash[i] = NULL;
+    }
+
+    // Montagem da mansão
+
+    Sala *raiz = criarSala("Sala de Estar");
+
+    raiz->esquerda = criarSala("Biblioteca");
+    raiz->direita = criarSala("Cozinha");
+
+    raiz->esquerda->esquerda = criarSala("Escritorio");
+    raiz->esquerda->direita = criarSala("Jardim");
+
+    raiz->direita->esquerda = criarSala("Quarto");
+    raiz->direita->direita = criarSala("Porao");
+
+    // Tabela hash pista -> suspeito
+
+    inserirNaHash("Livro rasgado", "joao");
+    inserirNaHash("Carta misteriosa", "joao");
+    inserirNaHash("Relogio quebrado", "joao");
+
+    inserirNaHash("Faca suja", "maria");
+    inserirNaHash("Pegadas", "maria");
+
+    inserirNaHash("Bilhete escondido", "carlos");
+    inserirNaHash("Luva preta", "carlos");
+
+    printf("=================================\n");
+    printf("DETECTIVE QUEST - NIVEL MESTRE\n");
+    printf("=================================\n");
+
+    explorarSalas(raiz, &arvorePistas);
+
+    verificarSuspeitoFinal(arvorePistas);
+
+    return 0;
+}
